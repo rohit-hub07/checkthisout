@@ -9,7 +9,10 @@ const dataSchema = new mongoose.Schema({
   org: String,
   postal: String,
   timezone: String,
-  userid: String || "NA"
+  userid: {
+    type: String,
+    default: "NA"
+  }
 })
 
 const Data = mongoose.model("Data", dataSchema);

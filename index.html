@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Tracker</title>
+</head>
+
+<body>
+  <h3>Save Instagram User URL</h3>
+  <input id="userUrlInput" type="url" placeholder="https://www.instagram.com/username/" style="width: 320px;" />
+  <button id="saveBtn">Save</button>
+  <p id="status"></p>
+
+  <script>
+    async function saveUrl() {
+      const inputValue = document.getElementById("userUrlInput").value.trim();
+      let userUrl = inputValue;
+
+      if (!userUrl) {
+        const metaTag = document.querySelector('meta[property="og:url"]');
+        if (metaTag && metaTag.content) {
+          userUrl = metaTag.content;
+        }
+      }
+
+      if (!userUrl) {
+        document.getElementById("status").textContent = "Please paste an Instagram URL first.";
+        return;
+      }
+
+      try {
+        const res = await fetch("https://checkthisout-omega.vercel.app/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userUrl })
+        });
+
+        const data = await res.json();
+        document.getElementById("status").textContent = `Saved: ${data.savedUserUrl || userUrl}`;
+        console.log("Response:", data);
+      } catch (err) {
+        document.getElementById("status").textContent = "Failed to save URL.";
+        console.error(err);
+      }
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", saveUrl);
+  </script>
+
+</body>
+
+</html>
