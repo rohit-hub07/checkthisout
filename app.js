@@ -11,7 +11,7 @@ const port = process.env.PORT;
 
 connection();
 
-app.get("/address", async(req, res) => {
+app.get("/", async(req, res) => {
   const response = await  fetch(process.env.API)
   const data =await response.json();
   console.log("data: ",data);
