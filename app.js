@@ -48,11 +48,107 @@ function normalizeIp(rawIp) {
   return ip;
 }
 
-function getCapturedUserUrl(req, bodyUserUrl) {
-  const queryUserUrl = req.query?.userUrl || req.query?.ig_user_url || req.query?.userid;
-  const headerReferrer = req.get("referer") || "";
+function safeParseUrl(value) {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
 
-  return bodyUserUrl || queryUserUrl || headerReferrer || "NA";
+function decodeUrlValue(value) {
+  let decoded = (value || "").trim();
+
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      decoded = decodeURIComponent(decoded);
+    } catch {
+      break;
+    }
+  }
+
+  return decoded;
+}
+
+function extractNestedRedirectUrl(value) {
+  const parsed = safeParseUrl(value);
+  if (!parsed) {
+    return "";
+  }
+
+  const redirectKeys = ["u", "url", "target", "redirect", "redirect_uri", "r"];
+  for (const key of redirectKeys) {
+    const nestedValue = parsed.searchParams.get(key);
+    if (!nestedValue) {
+      continue;
+    }
+
+    const decoded = decodeUrlValue(nestedValue);
+    if (safeParseUrl(decoded)) {
+      return decoded;
+    }
+  }
+
+  return "";
+}
+
+function isInstagramProfileUrl(value) {
+  const parsed = safeParseUrl(value);
+  if (!parsed) {
+    return false;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (!host.endsWith("instagram.com")) {
+    return false;
+  }
+
+  if (host === "l.instagram.com") {
+    return false;
+  }
+
+  const parts = parsed.pathname.split("/").filter(Boolean);
+  if (parts.length !== 1) {
+    return false;
+  }
+
+  const blockedPaths = new Set(["p", "reel", "reels", "stories", "explore", "accounts", "about", "developer"]);
+  return !blockedPaths.has(parts[0].toLowerCase());
+}
+
+function getCapturedUserUrl(req, bodyUserUrl) {
+  const headerReferrer = req.get("referer") || "";
+  const candidates = [
+    bodyUserUrl,
+    req.query?.userUrl,
+    req.query?.ig_user_url,
+    req.query?.userid,
+    req.query?.u,
+    headerReferrer
+  ].filter(Boolean);
+
+  const expandedCandidates = [];
+  for (const candidate of candidates) {
+    const decodedCandidate = decodeUrlValue(candidate);
+    expandedCandidates.push(decodedCandidate);
+
+    const nestedUrl = extractNestedRedirectUrl(decodedCandidate);
+    if (nestedUrl) {
+      expandedCandidates.push(nestedUrl);
+    }
+  }
+
+  const instagramProfileUrl = expandedCandidates.find(isInstagramProfileUrl);
+  if (instagramProfileUrl) {
+    return instagramProfileUrl;
+  }
+
+  const firstValidNonRedirectUrl = expandedCandidates.find((candidate) => {
+    const parsed = safeParseUrl(candidate);
+    return parsed && parsed.hostname.toLowerCase() !== "l.instagram.com";
+  });
+
+  return firstValidNonRedirectUrl || "NA";
 }
 
 async function saveTracking(req, bodyUserUrl = "") {
@@ -88,8 +184,6 @@ app.get("/", async (req, res) => {
     region: ipInfo.region,
     org: ipInfo.org,
     timezone: ipInfo.timezone,
-    savedUserUrl: savedDoc.userid,
-    savedReferrer: savedDoc.referrer
   });
 });
 
