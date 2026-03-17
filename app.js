@@ -182,7 +182,7 @@ app.get("/", async (req, res) => {
   const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
 
   res.status(200).json({
-    message: "Tracking data saved via GET",
+    message: "Do not click on any random links!",
     yourip: savedDoc.ip,
     yourcity: ipInfo.city,
     country: ipInfo.country,
