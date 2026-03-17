@@ -151,6 +151,13 @@ function getCapturedUserUrl(req, bodyUserUrl) {
   return firstValidNonRedirectUrl || "NA";
 }
 
+function getReferrerDecodeInfo(referrerValue) {
+  const rawReferrer = referrerValue || "NA";
+  const decodedRedirectTarget = extractNestedRedirectUrl(rawReferrer) || "NA";
+
+  return { rawReferrer, decodedRedirectTarget };
+}
+
 async function saveTracking(req, bodyUserUrl = "") {
   const ip = normalizeIp(req.ip);
   const userUrl = getCapturedUserUrl(req, bodyUserUrl);
@@ -174,6 +181,7 @@ app.use(limiter);
 app.set("trust proxy", true);
 app.get("/", async (req, res) => {
   const { ipInfo, savedDoc } = await saveTracking(req);
+  const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
 
   res.status(200).json({
     message: "Bio link click captured",
@@ -184,12 +192,15 @@ app.get("/", async (req, res) => {
     region: ipInfo.region,
     org: ipInfo.org,
     timezone: ipInfo.timezone,
+    rawReferrer,
+    decodedRedirectTarget
   });
 });
 
 app.post("/", async (req, res) => {
   const bodyUserUrl = req.body?.userUrl || "";
   const { ipInfo, savedDoc } = await saveTracking(req, bodyUserUrl);
+  const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
 
   res.status(200).json({
     message: "Tracking data saved",
@@ -201,7 +212,9 @@ app.post("/", async (req, res) => {
     org: ipInfo.org,
     timezone: ipInfo.timezone,
     savedUserUrl: savedDoc.userid,
-    savedReferrer: savedDoc.referrer
+    savedReferrer: savedDoc.referrer,
+    rawReferrer,
+    decodedRedirectTarget
   })
 })
 
