@@ -7,12 +7,11 @@ import Data from "./db.model.js";
 dotenv.config();
 
 const app = express();
-app.use(express.json());
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
 
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
@@ -116,10 +115,9 @@ function isInstagramProfileUrl(value) {
   return !blockedPaths.has(parts[0].toLowerCase());
 }
 
-function getCapturedUserUrl(req, bodyUserUrl) {
+function getCapturedUserUrl(req) {
   const headerReferrer = req.get("referer") || "";
   const candidates = [
-    bodyUserUrl,
     req.query?.userUrl,
     req.query?.ig_user_url,
     req.query?.userid,
@@ -158,9 +156,9 @@ function getReferrerDecodeInfo(referrerValue) {
   return { rawReferrer, decodedRedirectTarget };
 }
 
-async function saveTracking(req, bodyUserUrl = "") {
+async function saveTracking(req) {
   const ip = normalizeIp(req.ip);
-  const userUrl = getCapturedUserUrl(req, bodyUserUrl);
+  const userUrl = getCapturedUserUrl(req);
   const referrer = req.get("referer") || "NA";
   const landingUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
 
@@ -184,24 +182,7 @@ app.get("/", async (req, res) => {
   const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
 
   res.status(200).json({
-    message: "Do not click on any random links!",
-    yourip: savedDoc.ip,
-    yourcity: ipInfo.city,
-    country: ipInfo.country,
-    location: ipInfo.loc,
-    region: ipInfo.region,
-    org: ipInfo.org,
-    timezone: ipInfo.timezone,
-  });
-});
-
-app.post("/", async (req, res) => {
-  const bodyUserUrl = req.body?.userUrl || "";
-  const { ipInfo, savedDoc } = await saveTracking(req, bodyUserUrl);
-  const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
-
-  res.status(200).json({
-    message: "Tracking data saved",
+    message: "Tracking data saved via GET",
     yourip: savedDoc.ip,
     yourcity: ipInfo.city,
     country: ipInfo.country,
@@ -211,10 +192,8 @@ app.post("/", async (req, res) => {
     timezone: ipInfo.timezone,
     savedUserUrl: savedDoc.userid,
     savedReferrer: savedDoc.referrer,
-    rawReferrer,
-    decodedRedirectTarget
-  })
-})
+  });
+});
 
 
 app.listen(port, () => {
