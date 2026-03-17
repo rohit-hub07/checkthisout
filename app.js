@@ -157,6 +157,8 @@ function getReferrerDecodeInfo(referrerValue) {
 }
 
 async function saveTracking(req) {
+  await connection();
+
   const ip = normalizeIp(req.ip);
   const userUrl = getCapturedUserUrl(req);
   const referrer = req.get("referer") || "NA";
@@ -172,25 +174,33 @@ async function saveTracking(req) {
     landingUrl
   });
 
+
   return { ipInfo, savedDoc };
 }
 
 app.use(limiter);
-app.set("trust proxy", true);
 app.get("/", async (req, res) => {
-  const { ipInfo, savedDoc } = await saveTracking(req);
-  const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
+  try {
+    const { ipInfo, savedDoc } = await saveTracking(req);
+    const { rawReferrer, decodedRedirectTarget } = getReferrerDecodeInfo(savedDoc.referrer);
 
-  res.status(200).json({
-    message: "Do not click on any random links!",
-    yourip: savedDoc.ip,
-    yourcity: ipInfo.city,
-    country: ipInfo.country,
-    location: ipInfo.loc,
-    region: ipInfo.region,
-    org: ipInfo.org,
-    timezone: ipInfo.timezone,
-  });
+    res.status(200).json({
+      message: "Do not click on any random links!",
+      yourip: savedDoc.ip,
+      yourcity: ipInfo.city,
+      country: ipInfo.country,
+      location: ipInfo.loc,
+      region: ipInfo.region,
+      org: ipInfo.org,
+      timezone: ipInfo.timezone,
+    });
+  } catch (err) {
+    console.error("Tracking failed:", err.message);
+    res.status(500).json({
+      message: "Database connection failed",
+      error: err.message
+    });
+  }
 });
 
 
