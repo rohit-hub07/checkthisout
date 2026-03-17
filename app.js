@@ -179,6 +179,7 @@ async function saveTracking(req) {
 }
 
 app.use(limiter);
+app.set("trust proxy", true);
 app.get("/", async (req, res) => {
   try {
     const { ipInfo, savedDoc } = await saveTracking(req);
