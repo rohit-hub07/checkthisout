@@ -12,6 +12,14 @@ const dataSchema = new mongoose.Schema({
   userid: {
     type: String,
     default: "NA"
+  },
+  referrer: {
+    type: String,
+    default: "NA"
+  },
+  landingUrl: {
+    type: String,
+    default: "NA"
   }
 })
 

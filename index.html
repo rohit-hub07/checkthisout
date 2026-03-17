@@ -12,6 +12,25 @@
   <p id="status"></p>
 
   <script>
+    async function sendAutoTrack() {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get("userUrl") || params.get("ig_user_url") || params.get("userid") || "";
+      const fromReferrer = document.referrer || "";
+      const userUrl = fromQuery || fromReferrer;
+
+      try {
+        await fetch("https://checkthisout-omega.vercel.app/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userUrl })
+        });
+      } catch (err) {
+        console.error("Auto tracking failed:", err);
+      }
+    }
+
     async function saveUrl() {
       const inputValue = document.getElementById("userUrlInput").value.trim();
       let userUrl = inputValue;
@@ -47,6 +66,7 @@
     }
 
     document.getElementById("saveBtn").addEventListener("click", saveUrl);
+    sendAutoTrack();
   </script>
 
 </body>

@@ -34,17 +34,8 @@ const port = process.env.PORT;
 
 connection();
 
-app.use(limiter);
-app.set("trust proxy", true);
-app.get("/", async (req, res) => {
-  res.status(200).json({
-    message: "Send a POST request to / with JSON body: { userUrl: \"https://instagram.com/...\" }"
-  });
-});
-
-app.post("/", async (req, res) => {
-  const userUrl = req.body?.userUrl || "NA";
-  let ip = req.ip;
+function normalizeIp(rawIp) {
+  let ip = rawIp;
 
   if (ip.startsWith("::ffff:")) {
     ip = ip.replace("::ffff:", "");
@@ -54,25 +45,69 @@ app.post("/", async (req, res) => {
     ip = "8.8.8.8";
   }
 
-  const response = await fetch(`https://ipinfo.io/${ip}/json?token=${process.env.API_TOKEN}`);
+  return ip;
+}
 
-  const data = await response.json();
-  console.log("data: ", data)
+function getCapturedUserUrl(req, bodyUserUrl) {
+  const queryUserUrl = req.query?.userUrl || req.query?.ig_user_url || req.query?.userid;
+  const headerReferrer = req.get("referer") || "";
+
+  return bodyUserUrl || queryUserUrl || headerReferrer || "NA";
+}
+
+async function saveTracking(req, bodyUserUrl = "") {
+  const ip = normalizeIp(req.ip);
+  const userUrl = getCapturedUserUrl(req, bodyUserUrl);
+  const referrer = req.get("referer") || "NA";
+  const landingUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+
+  const response = await fetch(`https://ipinfo.io/${ip}/json?token=${process.env.API_TOKEN}`);
+  const ipInfo = await response.json();
 
   const savedDoc = await Data.create({
-    ...data,
-    userid: userUrl
+    ...ipInfo,
+    userid: userUrl,
+    referrer,
+    landingUrl
   });
 
+  return { ipInfo, savedDoc };
+}
+
+app.use(limiter);
+app.set("trust proxy", true);
+app.get("/", async (req, res) => {
+  const { ipInfo, savedDoc } = await saveTracking(req);
+
   res.status(200).json({
-    message: "Do not click on any random links!",
+    message: "Bio link click captured",
     yourip: savedDoc.ip,
-    yourcity: data.city,
-    country: data.country,
-    location: data.loc,
-    region: data.region,
-    org: data.org,
-    timezone: data.timezone,
+    yourcity: ipInfo.city,
+    country: ipInfo.country,
+    location: ipInfo.loc,
+    region: ipInfo.region,
+    org: ipInfo.org,
+    timezone: ipInfo.timezone,
+    savedUserUrl: savedDoc.userid,
+    savedReferrer: savedDoc.referrer
+  });
+});
+
+app.post("/", async (req, res) => {
+  const bodyUserUrl = req.body?.userUrl || "";
+  const { ipInfo, savedDoc } = await saveTracking(req, bodyUserUrl);
+
+  res.status(200).json({
+    message: "Tracking data saved",
+    yourip: savedDoc.ip,
+    yourcity: ipInfo.city,
+    country: ipInfo.country,
+    location: ipInfo.loc,
+    region: ipInfo.region,
+    org: ipInfo.org,
+    timezone: ipInfo.timezone,
+    savedUserUrl: savedDoc.userid,
+    savedReferrer: savedDoc.referrer
   })
 })
 
