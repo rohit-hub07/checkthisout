@@ -22,11 +22,21 @@ const port = process.env.PORT;
 connection();
 
 app.use(limiter);
+app.set("trust proxy", true);
 app.get("/", async(req, res) => {
-  const ip = req.ip;
-  const response = await  fetch(`https://ipinfo.io/json`)
-  const data =await response.json();
-  console.log("data: ",data);
+  let ip = req.ip;
+
+  if (ip.startsWith("::ffff:")) {
+    ip = ip.replace("::ffff:", "");
+  }
+
+  if (ip === "::1" || ip === "127.0.0.1") {
+    ip = "8.8.8.8";
+  }
+
+  const response = await fetch(`https://ipinfo.io/${ip}/json?token=${process.env.API_TOKEN}`);
+  const data = await response.json();
+  console.log("data: ",data)
   await Data.create(data);
   res.status(200).json({
     message: "Please don't click on any random links!",
