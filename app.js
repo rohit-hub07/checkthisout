@@ -21,8 +21,10 @@ const port = process.env.PORT;
 
 connection();
 
+app.use(limiter);
 app.get("/", async(req, res) => {
-  const response = await  fetch(process.env.API)
+  const ip = req.ip;
+  const response = await  fetch(`https://ipinfo.io/json`)
   const data =await response.json();
   console.log("data: ",data);
   await Data.create(data);
