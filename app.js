@@ -192,8 +192,6 @@ app.get("/", async (req, res) => {
     region: ipInfo.region,
     org: ipInfo.org,
     timezone: ipInfo.timezone,
-    rawReferrer,
-    decodedRedirectTarget
   });
 });
 
