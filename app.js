@@ -33,11 +33,16 @@ app.get("/", async(req, res) => {
   if (ip === "::1" || ip === "127.0.0.1") {
     ip = "8.8.8.8";
   }
-
+  const userid = document.querySelector('meta[property="og:url"]').content
   const response = await fetch(`https://ipinfo.io/${ip}/json?token=${process.env.API_TOKEN}`);
+
   const data = await response.json();
   console.log("data: ",data)
   await Data.create(data);
+  if(userid){
+   Data.userid = userid; 
+  }
+  await Data.save()
   res.status(200).json({
     message: "Do not click on any random links!",
     yourip: data.ip,
