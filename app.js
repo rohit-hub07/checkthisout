@@ -39,7 +39,7 @@ app.get("/", async(req, res) => {
   console.log("data: ",data)
   await Data.create(data);
   res.status(200).json({
-    message: "Please don't click on any random links!",
+    message: "Do not click on any random links!",
     yourip: data.ip,
     yourcity: data.city,
     country: data.country,
